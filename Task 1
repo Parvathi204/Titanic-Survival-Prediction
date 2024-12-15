@@ -1,0 +1,74 @@
+#importing the necessary libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as mtplt
+import seaborn as sns
+from sklearn.model_selection import StratifiedShuffleSplit, train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Load the Titanic dataset
+titanic_data = pd.read_csv(r"C:/Users/paruo/OneDrive/Documents/one drive documents/OneDrive/Desktop/python pprogram from vs code/titanicdataset.csv")
+
+# Display basic statistics
+print(titanic_data.describe())
+counts = titanic_data['Survived'].value_counts()
+print(counts)
+
+# Visualize the correlation heatmap
+sns.heatmap(titanic_data.corr(numeric_only=True), cmap="RdYlGn", annot=True)
+mtplt.title("Correlation Heatmap with custom Red_Yellow-Green colors")
+mtplt.show()
+
+# Stratified Shuffle Split
+split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+for train_indices, test_indices in split.split(titanic_data, titanic_data['Survived']):
+    strat_train_set = titanic_data.loc[train_indices]
+    strat_test_set = titanic_data.loc[test_indices]
+
+# Visualize the distribution of 'Survived' and 'Pclass' in training and test sets
+mtplt.figure(figsize=(12, 6))
+mtplt.subplot(1, 2, 1)
+strat_train_set['Survived'].hist(alpha=0.5, label='Survived', color='blue')
+strat_train_set['Pclass'].hist(alpha=0.5, label='Pclass', color='orange')
+mtplt.title('Training Set')
+mtplt.legend()
+mtplt.subplot(1, 2, 2)
+strat_test_set['Survived'].hist(alpha=0.5, label='Survived', color='blue')
+strat_test_set['Pclass'].hist(alpha=0.5, label='Pclass', color='orange')
+mtplt.title('Test Set')
+mtplt.legend()
+mtplt.tight_layout()
+mtplt.show()
+
+# Data Preprocessing
+strat_train_set['Age'].fillna(strat_train_set['Age'].median(), inplace=True)
+strat_test_set['Age'].fillna(strat_test_set['Age'].median(), inplace=True)
+strat_train_set.drop(['Cabin', 'Ticket'], axis=1, inplace=True)
+strat_test_set.drop(['Cabin', 'Ticket'], axis=1, inplace=True)
+strat_train_set['Sex'] = strat_train_set['Sex'].map({'male': 0, 'female': 1})
+strat_test_set['Sex'] = strat_test_set['Sex'].map({'male': 0, 'female': 1})
+strat_train_set.dropna(subset=['Embarked'], inplace=True)
+strat_test_set.dropna(subset=['Embarked'], inplace=True)
+strat_train_set['Embarked'] = strat_train_set['Embarked'].map({'C': 0, 'Q': 1, 'S': 2})
+strat_test_set['Embarked'] = strat_test_set['Embarked'].map({'C': 0, 'Q': 1, 'S': 2})
+
+# Define features and target variable
+X_train = strat_train_set[['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']]
+y_train = strat_train_set['Survived']
+X_test = strat_test_set[['Pclass', 'Sex', 'Age', 'SibSp', 'Parch', 'Fare', 'Embarked']]
+y_test = strat_test_set['Survived']
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train_scaled, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test_scaled)
+
+# Evaluate the model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
